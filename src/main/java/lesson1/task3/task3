@@ -1,0 +1,9 @@
+Aşağıda qeyd edilmiş main (entrypoint) metodların handı validdir? (2 seçim edilməlidir)
+1) private static void main(String[] args)
+2) public static final main(String[] elements)
+3) public void main(String[] args)
+4) public static void main(String... elements)
+5) protected static void main(String... args)
+6) public static final void main(String ... args)
+
+Cavab: 1,4
