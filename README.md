@@ -1,3 +1,2 @@
 # aist_group_lesson1
-Lesson 1 tasks
-Lesson 2 tasks
+Lesson 1 & 2 tasks
