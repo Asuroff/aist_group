@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Properties;
 
 public class TurboAzDataCollector {
-    private static final int TARGET_PAGE = 6;
+    private static final int TARGET_PAGE = 5;
     private static final String PROPERTIES = "scraper.properties";
 
     public static void main(String[] args) {
