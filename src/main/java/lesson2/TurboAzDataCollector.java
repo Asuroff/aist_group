@@ -19,56 +19,34 @@ import java.util.List;
 import java.util.Properties;
 
 public class TurboAzDataCollector {
-    private static final int TARGET_PAGE = 5;
-    private static final String PROPERTIES = "scraper.properties";
+      private static final String BASE_URL = "https://turbo.az/autos";
+    private static final String STATE_FILE_PATH = "state.txt";
+    private static final int MAX_PAGES = 5;
 
     public static void main(String[] args) {
-        Properties properties = loadProperties();
+        try {
+            int currentPage = getCurrentPage();
+            List<String> vehicleInfoList = new ArrayList<>();
 
-        int lastPage = Integer.parseInt(properties.getProperty("lastPage", "0"));
-
-        List<String[]> carDataList = new ArrayList<>();
-        for (int pageNumber = lastPage + 1; pageNumber <= TARGET_PAGE; pageNumber++) {
-            System.out.println("Processing page " + pageNumber + "...");
-            String url = "https://turbo.az/autos/?page=" + pageNumber;
-            try {
-                Document doc = Jsoup.connect(url).get();
-                Elements carLinks = doc.select("a.products-i__link[href]");
+            for (int page = currentPage; page <= MAX_PAGES; page++) {
+                String pageUrl = BASE_URL + "?page=" + page;
+                Document doc = Jsoup.connect(pageUrl).get();
+                Elements carLinks = doc.select(".products-list .products-i .products-info .products-name a");
 
                 for (Element link : carLinks) {
-                    String carLink = link.attr("href");
-                    Document carPage = Jsoup.connect("https://turbo.az/" + carLink).get();
-
-                    List<String> carData = new ArrayList<>();
-                    Elements elements = carPage.select("div.product-properties__column div.product-properties__i");
-
-                    for (Element element : elements) {
-                        String title = element.select("label.product-properties__i-name").text();
-                        String value = element.select("span.product-properties__i-value").text();
-                        carData.add(title + ": " + value);
-                    }
-
-                    Element priceElement = carPage.selectFirst(".product-price__i");
-                    String price = priceElement.text();
-                    carData.add("Qiymet: " + price);
-
-                    carDataList.add(carData.toArray(new String[0]));
+                    String carUrl = link.absUrl("href");
+                    Document carDoc = Jsoup.connect(carUrl).get();
+                    String vehicleInfo = carDoc.select(".product-properties").text();
+                    String price = carDoc.select(".product-price").text();
+                    vehicleInfoList.add(vehicleInfo + " - " + price);
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-                break;
             }
-        }
 
-        if (!carDataList.isEmpty()) {
-            writeDataToExcel(carDataList);
-            System.out.println("Data scrapped from page " + lastPage + " to " + TARGET_PAGE);
-            properties.setProperty("lastPage", String.valueOf(TARGET_PAGE));
-            saveProperties(properties);
-        } else {
-            System.out.println("TARGET_PAGE should be greater than " + lastPage);
+            writeDataToExcel(vehicleInfoList);
+            updateCurrentPage(MAX_PAGES); // Update current page to the last processed page
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
     }
 
     private static void writeDataToExcel(List<String[]> carDataList) {
@@ -114,23 +92,23 @@ public class TurboAzDataCollector {
         }
     }
 
-    private static Properties loadProperties() {
-        Properties properties = new Properties();
-        try (InputStream inputStream = new FileInputStream(PROPERTIES)) {
-            properties.load(inputStream);
+    private static int getCurrentPage() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(STATE_FILE_PATH))) {
+            String line = reader.readLine();
+            if (line != null) {
+                return Integer.parseInt(line);
+            }
         } catch (IOException e) {
-            saveProperties(properties);
+            // Ignore, assume file doesn't exist or is corrupted
         }
-        return properties;
+        return 1; // Start from the first page if state file doesn't exist or is corrupted
     }
 
-    private static void saveProperties(Properties properties) {
-        try (OutputStream outputStream = new FileOutputStream(PROPERTIES)) {
-            properties.store(outputStream, null);
+    private static void updateCurrentPage(int page) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(STATE_FILE_PATH))) {
+            writer.write(String.valueOf(page));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-}
 
